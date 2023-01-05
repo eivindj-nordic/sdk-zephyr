@@ -70,7 +70,10 @@ struct flash_sector *fcb_getnext_sector(struct fcb *fcb,
 int fcb_getnext_nolock(struct fcb *fcb, struct fcb_entry *loc);
 
 int fcb_elem_info(struct fcb *fcb, struct fcb_entry *loc);
-int fcb_elem_crc8(struct fcb *fcb, struct fcb_entry *loc, uint8_t *crc8p);
+void fcb_elem_crc8_init(struct fcb_entry *loc);
+void fcb_elem_crc8_append(struct fcb_entry *loc, void *data, size_t len);
+int fcb_elem_crc8_calculate(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p);
+int fcb_elem_crc8_validate(struct fcb *fcb, struct fcb_entry *loc, bool crc_loc_cmp);
 
 int fcb_sector_hdr_init(struct fcb *fcb, struct flash_sector *sector, uint16_t id);
 int fcb_sector_hdr_read(struct fcb *fcb, struct flash_sector *sector,

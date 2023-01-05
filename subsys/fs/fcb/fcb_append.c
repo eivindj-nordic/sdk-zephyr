@@ -107,6 +107,11 @@ fcb_append(struct fcb *fcb, uint16_t len, struct fcb_entry *append_loc)
 	append_loc->fe_elem_off = active->fe_elem_off;
 	append_loc->fe_data_off = active->fe_elem_off + cnt;
 
+	if (fcb->f_crc_precalculate) {
+		fcb_elem_crc8_init(append_loc);
+		fcb_elem_crc8_append(append_loc, tmp_str, cnt);
+	}
+
 	active->fe_elem_off = append_loc->fe_data_off + len;
 
 	k_mutex_unlock(&fcb->f_mtx);
@@ -118,23 +123,45 @@ err:
 }
 
 int
+fcb_append_crc(struct fcb *fcb, struct fcb_entry *loc, void *data, size_t len)
+{
+	if (!fcb->f_crc_precalculate) {
+		return -ENOTSUP;
+	}
+	fcb_elem_crc8_append(loc, data, len);
+
+	return 0;
+}
+
+int
 fcb_append_finish(struct fcb *fcb, struct fcb_entry *loc)
 {
 	int rc;
-	uint8_t crc8[fcb->f_align];
+	uint8_t data[fcb->f_align];
 	off_t off;
 
-	(void)memset(crc8, 0xFF, sizeof(crc8));
+	(void)memset(data, 0xFF, sizeof(data));
 
-	rc = fcb_elem_crc8(fcb, loc, &crc8[0]);
-	if (rc) {
-		return rc;
+	if (!fcb->f_crc_precalculate) {
+		rc = fcb_elem_crc8_calculate(fcb, loc, &loc->fe_crc);
+		if (rc) {
+			return rc;
+		}
+	} else {
+		/* Info is also filled in in fcb_elem_crc8_calculate */
+		rc = fcb_elem_info(fcb, loc);
+		if (rc) {
+			return rc;
+		}
 	}
+
+	data[0] = loc->fe_crc;
 	off = loc->fe_data_off + fcb_len_in_flash(fcb, loc->fe_data_len);
 
-	rc = fcb_flash_write(fcb, loc->fe_sector, off, crc8, fcb->f_align);
+	rc = fcb_flash_write(fcb, loc->fe_sector, off, data, fcb->f_align);
 	if (rc) {
 		return -EIO;
 	}
+
 	return 0;
 }

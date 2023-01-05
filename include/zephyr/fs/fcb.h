@@ -56,6 +56,8 @@ struct fcb_entry {
 	/**< Offset from the start of the sector to the start of element. */
 
 	uint16_t fe_data_len; /**< Size of data area in fcb entry*/
+
+	uint8_t fe_crc;
 };
 
 /**
@@ -129,6 +131,9 @@ struct fcb {
 	/**< The value flash takes when it is erased. This is read from
 	 * flash parameters and initialized upon call to fcb_init.
 	 */
+
+	const uint8_t f_crc_precalculate : 1;
+	/**< Disable CRC for the fcb_entries in flash */
 };
 
 /**
@@ -168,6 +173,11 @@ int fcb_init(int f_area_id, struct fcb *fcb);
  * @return 0 on success, non-zero on failure.
  */
 int fcb_append(struct fcb *fcb, uint16_t len, struct fcb_entry *loc);
+
+/**
+ * TODO
+ */
+int fcb_append_crc(struct fcb *fcb, struct fcb_entry *loc, void *data, size_t len);
 
 /**
  * Finishes entry append operation.

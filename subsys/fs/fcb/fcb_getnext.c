@@ -15,13 +15,13 @@ fcb_getnext_in_sector(struct fcb *fcb, struct fcb_entry *loc)
 {
 	int rc;
 
-	rc = fcb_elem_info(fcb, loc);
+	rc = fcb_elem_crc8_validate(fcb, loc, 0);
 	if (rc == 0 || rc == -EBADMSG) {
 		do {
 			loc->fe_elem_off = loc->fe_data_off +
 			  fcb_len_in_flash(fcb, loc->fe_data_len) +
 			  fcb_len_in_flash(fcb, FCB_CRC_SZ);
-			rc = fcb_elem_info(fcb, loc);
+			rc = fcb_elem_crc8_validate(fcb, loc, 0);
 			if (rc != -EBADMSG) {
 				break;
 			}
@@ -56,7 +56,7 @@ fcb_getnext_nolock(struct fcb *fcb, struct fcb_entry *loc)
 		 * If offset is zero, we serve the first entry from the sector.
 		 */
 		loc->fe_elem_off = fcb_len_in_flash(fcb, sizeof(struct fcb_disk_area));
-		rc = fcb_elem_info(fcb, loc);
+		rc = fcb_elem_crc8_validate(fcb, loc, 0);
 		switch (rc) {
 		case 0:
 			return 0;
@@ -90,7 +90,7 @@ next_sector:
 			}
 			loc->fe_sector = fcb_getnext_sector(fcb, loc->fe_sector);
 			loc->fe_elem_off = fcb_len_in_flash(fcb, sizeof(struct fcb_disk_area));
-			rc = fcb_elem_info(fcb, loc);
+			rc = fcb_elem_crc8_validate(fcb, loc, 0);
 			switch (rc) {
 			case 0:
 				return 0;

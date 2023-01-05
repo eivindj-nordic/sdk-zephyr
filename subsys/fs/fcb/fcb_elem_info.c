@@ -11,20 +11,15 @@
 #include "fcb_priv.h"
 
 /*
- * Given offset in flash sector, fill in rest of the fcb_entry, and crc8 over
- * the data.
+ * Given offset in flash sector, fill in rest of the fcb_entry.
  */
 int
-fcb_elem_crc8(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p)
+fcb_elem_info(struct fcb *fcb, struct fcb_entry *loc)
 {
-	uint8_t tmp_str[FCB_TMP_BUF_SZ];
-	int cnt;
-	int blk_sz;
-	uint8_t crc8;
-	uint16_t len;
-	uint32_t off;
-	uint32_t end;
 	int rc;
+	uint16_t len;
+	int cnt;
+	uint8_t tmp_str[FCB_TMP_BUF_SZ];
 
 	if (loc->fe_elem_off + 2 > loc->fe_sector->fs_size) {
 		return -ENOTSUP;
@@ -41,11 +36,46 @@ fcb_elem_crc8(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p)
 	loc->fe_data_off = loc->fe_elem_off + fcb_len_in_flash(fcb, cnt);
 	loc->fe_data_len = len;
 
+	return 0;
+}
+
+/*
+ * Given offset in flash sector, fill in rest of the fcb_entry, and crc8 over
+ * the data in flash.
+ */
+int
+fcb_elem_crc8_calculate(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p)
+{
+	uint8_t tmp_str[FCB_TMP_BUF_SZ];
+	int cnt;
+	int blk_sz;
+	uint8_t crc8;
+	uint32_t off;
+	uint32_t end;
+	int rc;
+	uint16_t len;
+
+	if (loc->fe_elem_off + 2 > loc->fe_sector->fs_size) {
+		return -ENOTSUP;
+	}
+	rc = fcb_flash_read(fcb, loc->fe_sector, loc->fe_elem_off, tmp_str, 2);
+	if (rc) {
+		return -EIO;
+	}
+
+	cnt = fcb_get_len(fcb, tmp_str, &len);
+	if (cnt < 0) {
+		return cnt;
+	}
+
+	loc->fe_data_off = loc->fe_elem_off + fcb_len_in_flash(fcb, cnt);
+	loc->fe_data_len = len;
+
 	crc8 = CRC8_CCITT_INITIAL_VALUE;
 	crc8 = crc8_ccitt(crc8, tmp_str, cnt);
 
 	off = loc->fe_data_off;
-	end = loc->fe_data_off + len;
+	end = loc->fe_data_off + loc->fe_data_len;
 	for (; off < end; off += blk_sz) {
 		blk_sz = end - off;
 		if (blk_sz > sizeof(tmp_str)) {
@@ -63,14 +93,33 @@ fcb_elem_crc8(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p)
 	return 0;
 }
 
-int fcb_elem_info(struct fcb *fcb, struct fcb_entry *loc)
+/*
+ * Initialize the fcb_entry CRC.
+ */
+void fcb_elem_crc8_init(struct fcb_entry *loc)
+{
+	loc->fe_crc = CRC8_CCITT_INITIAL_VALUE;
+}
+
+/*
+ * Append data to the fcb_entry CRC calculation.
+ */
+void fcb_elem_crc8_append(struct fcb_entry *loc, void *data, size_t len)
+{
+	loc->fe_crc = crc8_ccitt(loc->fe_crc, data, len);
+}
+
+/*
+ * Validate the fcb_entry data in flash.
+ */
+int fcb_elem_crc8_validate(struct fcb *fcb, struct fcb_entry *loc, bool crc_loc_cmp)
 {
 	int rc;
 	uint8_t crc8;
 	uint8_t fl_crc8;
 	off_t off;
 
-	rc = fcb_elem_crc8(fcb, loc, &crc8);
+	rc = fcb_elem_crc8_calculate(fcb, loc, &crc8);
 	if (rc) {
 		return rc;
 	}
@@ -81,7 +130,7 @@ int fcb_elem_info(struct fcb *fcb, struct fcb_entry *loc)
 		return -EIO;
 	}
 
-	if (fl_crc8 != crc8) {
+	if ((fl_crc8 != crc8) || (crc_loc_cmp && fl_crc8 != loc->fe_crc)) {
 		return -EBADMSG;
 	}
 	return 0;

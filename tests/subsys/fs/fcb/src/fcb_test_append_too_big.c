@@ -68,8 +68,8 @@ ZTEST(fcb_test_with_2sectors_set, test_fcb_append_too_big)
 		rc = fcb_append_finish(fcb, &elem_loc);
 		zassert_true(rc == 0, "fcb_append call failure");
 
-		rc = fcb_elem_info(fcb, &elem_loc);
-		zassert_true(rc == 0, "fcb_elem_info call failure");
+		rc = fcb_elem_crc8_validate(fcb, &elem_loc, 1);
+		zassert_true(rc == 0, "fcb_elem_crc8_validate call failure");
 		zassert_true(elem_loc.fe_data_len == len,
 		"entry length fetched should match length of appended entry");
 }
