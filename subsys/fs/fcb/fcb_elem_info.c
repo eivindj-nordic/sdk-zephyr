@@ -41,6 +41,13 @@ fcb_elem_crc8(struct fcb *fcb, struct fcb_entry *loc, uint8_t *c8p)
 	loc->fe_data_off = loc->fe_elem_off + fcb_len_in_flash(fcb, cnt);
 	loc->fe_data_len = len;
 
+#if defined(CONFIG_FCB_CRC_DISABLED_ALLOW)
+	if (fcb->f_crc_disable) {
+		*c8p = CRC8_CCITT_INITIAL_VALUE;
+		return 0;
+	}
+#endif /* CONFIG_FCB_CRC_DISABLED_ALLOW */
+
 	crc8 = CRC8_CCITT_INITIAL_VALUE;
 	crc8 = crc8_ccitt(crc8, tmp_str, cnt);
 

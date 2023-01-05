@@ -12,3 +12,13 @@ config FCB
 	depends on FLASH_MAP
 	help
 	  Enable support of Flash Circular Buffer.
+
+if FCB
+
+config FCB_CRC_DISABLED_ALLOW
+	bool "Allow disabling Flash Circular Buffer CRC"
+	help
+	  Allow disabling the CRC check for Flash Circular Buffer Entries by setting the
+	  f_crc_disable field of the fcb struct.
+
+endif

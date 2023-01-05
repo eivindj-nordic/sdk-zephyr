@@ -129,6 +129,10 @@ struct fcb {
 	/**< The value flash takes when it is erased. This is read from
 	 * flash parameters and initialized upon call to fcb_init.
 	 */
+#if defined(CONFIG_FCB_CRC_DISABLED_ALLOW)
+	const uint8_t f_crc_disable : 1;
+	/**< Disable CRC for the fcb_entries in flash */
+#endif
 };
 
 /**
