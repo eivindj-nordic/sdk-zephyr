@@ -6,7 +6,7 @@
 if SOC_NRF9161_SICA
 
 config SOC
-	default "nRF9161_SICA"
+	default "nRF9120"
 
 config NUM_IRQS
 	default 65
